@@ -1,10 +1,10 @@
 # Elf
 
-A sketch for an automation engine that will run a script form a script library on multiple target computers.
+A sketch for an automation engine that will run a script from a script library on multiple target computers.
 
-Interfaces with a configuration database that holds target computer IP addresses and credentials
+Interfaces with a configuration database that holds target computer IP addresses and credentials.
 
-Uses event-driven design for performance
+Uses event-driven design for performance.
 
 # Open-source?
 
@@ -18,7 +18,7 @@ Reach out to me if you'd like to discuss.
 
 # Design goals
 
-- [ ] High-performace
+- [ ] High-performance
 - [ ] Only allows script from the library to be run
 - [ ] Easy to develop script for the library
   - [ ] Minimises platform-specific requirements
