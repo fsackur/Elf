@@ -18,17 +18,17 @@ Reach out to me if you'd like to discuss.
 
 # Design goals
 
-- High-performace
-- Only allows script from the library to be run
-- Easy to develop script for the library
-  - Minimises platform-specific requirements
-- Easy to debug script as it's running on target computers
-- Returns alternate data streams
-- Builds dependencies and transfers them to target computers
-- Supports a CI/CD pipeline
-- Attempts connection to target computers with WinRM
-  - Fails back to PSEXEC
-- Supports target computers running Server 2008 RTM and PowerShell 2
+- [ ] High-performace
+- [ ] Only allows script from the library to be run
+- [ ] Easy to develop script for the library
+  - [ ] Minimises platform-specific requirements
+- [ ] Easy to debug script as it's running on target computers
+- [ ] Returns alternate data streams
+- [ ] Builds dependencies and transfers them to target computers
+- [ ] Supports a CI/CD pipeline
+- [ ] Attempts connection to target computers with WinRM
+  - [ ] Fails back to PSEXEC
+- [ ] Supports target computers running Server 2008 RTM and PowerShell 2
 
 # Credits
 Shout out to Jim Moyle ([@JimMoyle](https://twitter.com/jimmoyle)), who helped enormously with his content on:
