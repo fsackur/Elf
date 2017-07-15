@@ -1,5 +1,6 @@
 function Run-Elf {
-
+    
+    [CmdletBinding()]
     param(
         #IDs of devices to look up in DB of IP and credential info
         [string[]]$DeviceID = 'localhost',
@@ -12,7 +13,8 @@ function Run-Elf {
     . $PSScriptRoot\..\Mock\Get-DeviceInfo.ps1
     . $PSScriptRoot\Get-RunObject.ps1
 
-    [string]$Script = Get-ScriptFromLibrary -ScriptName $ScriptName
+    #[string]$Script = Get-ScriptFromLibrary -ScriptName $ScriptName
+    $Script = 'Write-Output "You invoked, sir?"'
 
     #Query DB for IPs and credentials for target computers
     $ConnectionInfos = Get-DeviceInfo -DeviceID $DeviceID
@@ -37,3 +39,5 @@ function Run-Elf {
     }
 
 }
+
+Run-Elf -Debug
