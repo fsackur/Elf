@@ -6,12 +6,21 @@ function Run-Elf {
         [string[]]$DeviceID = 'localhost',
 
         #What script you want to run
-        [string]$ScriptName = 'Get-PowerShellVersion'
+        [string]$ScriptName = 'Get-PowerShellVersion',
+
+        #Exposes Log() method
+        [psobject]$Logger = $(. $PSScriptRoot\Get-LoggerObject.ps1; Get-LoggerObject)
     )
 
     . $PSScriptRoot\..\Mock\Get-ScriptFromLibrary.ps1
     . $PSScriptRoot\..\Mock\Get-DeviceInfo.ps1
     . $PSScriptRoot\Get-RunObject.ps1
+
+    $LOgger.Log(
+        $null, 
+        'Information', 
+        "Starting Elf: {0}" -f $ScriptName
+    )
 
     #[string]$Script = Get-ScriptFromLibrary -ScriptName $ScriptName
     $Script = 'Write-Output "You invoked, sir?"'

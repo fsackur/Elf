@@ -71,6 +71,6 @@ function Get-RunObject {
     return $RunObj
 }
 
-$RunObj = Get-RunObject -Script 'Start-Sleep 1; return $ELF_DEBUG' -Debug -Verbose
-$RunObj.BeginInvoke()
+#$RunObj = Get-RunObject -Script 'Start-Sleep 1; return $ELF_DEBUG' -Debug -Verbose
+#$RunObj.BeginInvoke()
 #$RunObj.Invoke()
