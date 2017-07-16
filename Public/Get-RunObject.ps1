@@ -55,30 +55,42 @@ function Get-RunObject {
         [CmdletBinding()]
         param()
 
-        $Output = $RunObj.PS.Invoke()
+        $Output = $this.PS.Invoke()
         $Output
-        $RunObj.RS.Dispose()
+        $this.PS.Streams.Verbose | foreach {Write-Verbose $_}
+        $this.PS.Streams.Debug | foreach {Write-Debug $_}
+        $this.PS.Streams.Error | foreach {Write-Error $_}
+        $this.RS.Dispose()
+        $this.PS.Dispose()
     }
 
     $RunObj | Add-Member -MemberType ScriptMethod -Name BeginInvoke -Value {
         [CmdletBinding()]
         param()
 
-        $Handle = $RunObj.PS.BeginInvoke()
+        $Handle = $this.PS.BeginInvoke()
         
         #Should be event-driven, sleep is just for testing
         while (-not $Handle.IsCompleted) {
             Start-Sleep -Milliseconds 200
         }
         
-        $Output = $RunObj.PS.EndInvoke($Handle)
+        $Output = $this.PS.EndInvoke($Handle)
         $Output
-        $RunObj.RS.Dispose()
+        $this.PS.Streams.Verbose | foreach {Write-Verbose $_}
+        $this.PS.Streams.Debug | foreach {Write-Debug $_}
+        $this.PS.Streams.Error | foreach {Write-Error $_}
+        $this.RS.Dispose()
+        $this.PS.Dispose()
     }
 
     return $RunObj
 }
 
-$RunObj = Get-RunObject -Script 'Get-Variable | where Name -match "Preference"' -Verbose
-$RunObj.BeginInvoke()
+$RunObj = Get-RunObject -Script '
+    Write-Verbose "Some verbose info"; 
+    Get-Variable | where Name -match "Preference"; 
+    Write-Error "Some error info here"
+' -Verbose -Debug
+#$RunObj.BeginInvoke()
 #$RunObj.Invoke()
