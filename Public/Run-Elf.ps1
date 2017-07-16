@@ -1,3 +1,39 @@
+
+<#
+    You can't reload a class without closing and reopening, which is a chore in ISE
+
+    THis is a dirty hack to give a different object type each run
+
+    So I can dev faster while the pace of change is high
+#>
+function Import-ElfType {
+    $TypeDef = @'
+    namespace Dusty.Automation {
+        public class MockRunObject {
+
+            public MockRunObject (
+                string Script,
+                string[] Dependencies,
+                object ConnectionInfo
+            ) {}
+        }
+    }
+'@
+
+    try {
+        $null = Get-Variable NextTypeSuffix -Scope Global
+        $Global:NextTypeSuffix++
+    } catch {
+        $Global:NextTypeSuffix = 0
+    }
+
+    $TypeDef = $TypeDef -replace 'MockRunObject', "RunObject$Global:NextTypeSuffix"
+    Add-Type -TypeDefinition $TypeDef -PassThru
+
+}
+
+
+
 function Run-Elf {
     
     [CmdletBinding()]
@@ -14,7 +50,11 @@ function Run-Elf {
 
     . $PSScriptRoot\..\Mock\Get-ScriptFromLibrary.ps1
     . $PSScriptRoot\..\Mock\Get-DeviceInfo.ps1
-    . $PSScriptRoot\Get-RunObject.ps1
+
+
+    #See my excuses in the comment block for this function
+    $RunObjType = Import-ElfType
+
 
     $LOgger.Log(
         $null, 
@@ -34,7 +74,7 @@ function Run-Elf {
 
     #Set up the job objects
     foreach ($ConnectionInfo in $ConnectionInfos) {
-        $RunObj = Get-RunObject (
+        $RunObj = New-Object $RunObjType (
             $Script,
             $Dependencies,
             $ConnectionInfo
