@@ -7,18 +7,7 @@
     So I can dev faster while the pace of change is high
 #>
 function Import-ElfType {
-    $TypeDef = @'
-    namespace Dusty.Automation {
-        public class MockRunObject {
-
-            public MockRunObject (
-                string Script,
-                string[] Dependencies,
-                object ConnectionInfo
-            ) {}
-        }
-    }
-'@
+    $TypeDef = Get-Content $PSScriptRoot\..\Elf\Classes\MockRunObject.cs -Raw
 
     try {
         $null = Get-Variable NextTypeSuffix -Scope Global
@@ -31,7 +20,6 @@ function Import-ElfType {
     Add-Type -TypeDefinition $TypeDef -PassThru
 
 }
-
 
 
 function Run-Elf {
@@ -79,6 +67,7 @@ function Run-Elf {
             $Dependencies,
             $ConnectionInfo
         )
+        Write-Verbose $RunObj
         $Fleet.Add($ConnectionInfo.DeviceID, $RunObj)
     }
 
