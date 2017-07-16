@@ -11,6 +11,7 @@ function Get-RunObject {
 
     
     [bool]$Debug = $PSBoundParameters["Debug"].IsPresent -eq $true
+    [bool]$Verbose = $PSBoundParameters["Verbose"].IsPresent -eq $true
     Write-Verbose ("Debug = {0}" -f $Debug)
     
 
@@ -33,14 +34,21 @@ function Get-RunObject {
         RS = [runspacefactory]::CreateRunspace()
     }
     
+    
+    $SessionVariables = @{
+        "MyPreference" = "MOAR CODE"
+    }
+    if ($Debug) {$SessionVariables.Add("DebugPreference", "Continue")}
+    if ($Verbose) {$SessionVariables.Add("VerbosePreference", "Continue")}
+
 
     $RunObj.RS.Name = $ConnectionInfo.DeviceID
     $RunObj.PS.Runspace = $RunObj.RS
-    if ($Debug) {$null = $RunObj.PS.AddScript('Wait-Debugger;')}
+    #if ($Debug) {$null = $RunObj.PS.AddScript('Wait-Debugger;')}
     $null = $RunObj.PS.AddScript($RunObj.Script)
     $RunObj.RS.Open()
-    if ($Debug) {
-        $RunObj.RS.SessionStateProxy.SetVariable("ELF_DEBUG", $Debug)
+    $SessionVariables.GetEnumerator() | foreach {
+        $RunObj.RS.SessionStateProxy.SetVariable($_.Name, $_.Value)
     }
 
     $RunObj | Add-Member -MemberType ScriptMethod -Name Invoke -Value {
@@ -71,6 +79,6 @@ function Get-RunObject {
     return $RunObj
 }
 
-#$RunObj = Get-RunObject -Script 'Start-Sleep 1; return $ELF_DEBUG' -Debug -Verbose
-#$RunObj.BeginInvoke()
+$RunObj = Get-RunObject -Script 'Get-Variable | where Name -match "Preference"' -Verbose
+$RunObj.BeginInvoke()
 #$RunObj.Invoke()
