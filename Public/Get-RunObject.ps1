@@ -20,7 +20,8 @@ function Get-RunObject {
         Dependencies = $Dependencies;
         ConnectionInfo = $ConnectionInfo;
         PS = [powershell]::Create();
-        RS = [runspacefactory]::CreateRunspace()
+        RS = [runspacefactory]::CreateRunspace();
+        Handle = $null
     }
     
     
@@ -54,12 +55,12 @@ function Get-RunObject {
         [CmdletBinding()]
         param()
 
-        $Handle = $this.PS.BeginInvoke()
+        $this.Handle = $this.PS.BeginInvoke()
       
-        $Output = $this.PS.EndInvoke($Handle)
-        $Output
-        $this.RS.Dispose()
-        $this.PS.Dispose()
+        #$Output = $this.PS.EndInvoke($Handle)
+        #$Output
+        #$this.RS.Dispose()
+        #$this.PS.Dispose()
     }
 
     return $RunObj
@@ -83,7 +84,12 @@ $null = Register-ObjectEvent -InputObject $RunObj.PS -EventName 'InvocationState
         Write-Verbose $Eventargs.InvocationStateInfo.State
         $Event.Sender.Streams.Verbose | foreach {Write-Verbose $_}
         $Event.Sender.Streams.Error | foreach {Write-Error $_}
+        $Event.Sender.EndInvoke($RunObj.Handle)
+        Write-Output "std"
+        
     }
+    Write-Host "hi"
+
 }
 
     
@@ -95,4 +101,4 @@ $null = Register-ObjectEvent -InputObject $RunObj.PS -EventName 'InvocationState
     )
 }
 
-$RunObj.Invoke()
+$RunObj.BeginInvoke()
