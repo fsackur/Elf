@@ -65,6 +65,7 @@ function Get-RunObject {
     return $RunObj
 }
 
+$Logger = Get-LoggerObject
 
 $RunObj = Get-RunObject -Script '
         $VerbosePreference = "COntinue";
@@ -88,7 +89,7 @@ $null = Register-ObjectEvent -InputObject $RunObj.PS -EventName 'InvocationState
     
 $null = Register-ObjectEvent -InputObject $RunObj.PS -EventName 'InvocationStateChanged' -Action {
     $Logger.Log(
-        $Event.Sender.Runspace.InstanceId.Sing(0, 8),
+        $event.Sender.Runspace.InstanceId.Guid.Substring(0, 8),
         'Information',
         "PS state {0}" -f $Eventargs.InvocationStateInfo.State
     )
