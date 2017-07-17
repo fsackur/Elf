@@ -15,17 +15,6 @@ function Get-RunObject {
     Write-Verbose ("Debug = {0}" -f $Debug)
     
 
-    #Use process MainWindowTitle so we can identify it from a separate debugging process
-    if ($Debug) {        
-        #$DebugID = (New-Guid).Guid
-        $DebugID = 'dd0311a1-6aaf-44d5-810b-4de968151e0c'   #Mock
-
-        $MWT = "Debug ID: {0}" -f $DebugID
-        $Host.UI.RawUI.WindowTitle = $MWT
-        Write-Host -ForegroundColor DarkYellow $MWT
-    }
-
-
     $RunObj = New-Object psobject -Property @{
         Script = $Script;
         Dependencies = $Dependencies;
@@ -57,9 +46,6 @@ function Get-RunObject {
 
         $Output = $this.PS.Invoke()
         $Output
-        $this.PS.Streams.Verbose | foreach {Write-Verbose $_}
-        $this.PS.Streams.Debug | foreach {Write-Debug $_}
-        $this.PS.Streams.Error | foreach {Write-Error $_}
         $this.RS.Dispose()
         $this.PS.Dispose()
     }
@@ -69,17 +55,9 @@ function Get-RunObject {
         param()
 
         $Handle = $this.PS.BeginInvoke()
-        
-        #Should be event-driven, sleep is just for testing
-        while (-not $Handle.IsCompleted) {
-            Start-Sleep -Milliseconds 200
-        }
-        
+      
         $Output = $this.PS.EndInvoke($Handle)
         $Output
-        $this.PS.Streams.Verbose | foreach {Write-Verbose $_}
-        $this.PS.Streams.Debug | foreach {Write-Debug $_}
-        $this.PS.Streams.Error | foreach {Write-Error $_}
         $this.RS.Dispose()
         $this.PS.Dispose()
     }
@@ -87,10 +65,33 @@ function Get-RunObject {
     return $RunObj
 }
 
+
 $RunObj = Get-RunObject -Script '
+        $VerbosePreference = "COntinue";
+        Start-sleep 1
     Write-Verbose "Some verbose info"; 
+    Write-Output "Standard"
     Get-Variable | where Name -match "Preference"; 
+    Start-sleep 1
     Write-Error "Some error info here"
 ' -Verbose -Debug
-#$RunObj.BeginInvoke()
-#$RunObj.Invoke()
+
+
+$null = Register-ObjectEvent -InputObject $RunObj.PS -EventName 'InvocationStateChanged' -Action {
+    if ($Eventargs.InvocationStateInfo.State -eq [System.Management.Automation.PSInvocationState]::Completed) {
+        Write-Verbose $Eventargs.InvocationStateInfo.State
+        $Event.Sender.Streams.Verbose | foreach {Write-Verbose $_}
+        $Event.Sender.Streams.Error | foreach {Write-Error $_}
+    }
+}
+
+    
+$null = Register-ObjectEvent -InputObject $RunObj.PS -EventName 'InvocationStateChanged' -Action {
+    $Logger.Log(
+        $Event.Sender.Runspace.InstanceId.Sing(0, 8),
+        'Information',
+        "PS state {0}" -f $Eventargs.InvocationStateInfo.State
+    )
+}
+
+$RunObj.Invoke()

@@ -80,6 +80,7 @@ function Read-Log {
     $LogFile = Join-Path $PSScriptRoot 'Elf.log'
 
     if ($DeviceID) {
+        $DeviceID = $DeviceID.Substring(8)
         $Filter = {$_ -match $DeviceID}
     } else {
         $Filter = {$true}
@@ -97,7 +98,7 @@ function Read-Log {
         $Colour = $Colours[$(
             $_.SubString(38, 12).Trim()
         )]
-        Write-Host -ForegroundColor $Colour ($_.SubString(53))
+        Write-Host -ForegroundColor $Colour $_ #($_.SubString(53))
 
     }
 
