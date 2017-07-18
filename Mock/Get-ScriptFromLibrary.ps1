@@ -21,3 +21,15 @@ function Get-ScriptFromLibrary {
         }
     }
 }
+
+function Script {
+    
+        #Wait-Debugger
+        #$VerbosePreference = "Continue";
+        Start-sleep 1
+        Write-Verbose "Some verbose info"; 
+        Write-Output "Standard"
+        Get-Variable | where Name -match "Preference"; 
+        Start-sleep 1
+        #Write-Error "Some error info here"
+}

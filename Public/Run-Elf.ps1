@@ -1,38 +1,4 @@
 
-<#
-    You can't reload a class without closing and reopening, which is a chore in ISE
-
-    THis is a dirty hack to give a different object type each run
-
-    So I can dev faster while the pace of change is high
-#>
-function Import-ElfType {
-    $TypeDef = @'
-    namespace Dusty.Automation {
-        public class MockRunObject {
-
-            public MockRunObject (
-                string Script,
-                string[] Dependencies,
-                object ConnectionInfo
-            ) {}
-        }
-    }
-'@
-
-    try {
-        $null = Get-Variable NextTypeSuffix -Scope Global
-        $Global:NextTypeSuffix++
-    } catch {
-        $Global:NextTypeSuffix = 0
-    }
-
-    $TypeDef = $TypeDef -replace 'MockRunObject', "RunObject$Global:NextTypeSuffix"
-    Add-Type -TypeDefinition $TypeDef -PassThru
-
-}
-
-
 
 function Run-Elf {
     
@@ -51,42 +17,59 @@ function Run-Elf {
     . $PSScriptRoot\..\Mock\Get-ScriptFromLibrary.ps1
     . $PSScriptRoot\..\Mock\Get-DeviceInfo.ps1
 
-
-    #See my excuses in the comment block for this function
-    $RunObjType = Import-ElfType
-
-
-    $LOgger.Log(
+    $Logger.Log(
         $null, 
         'Information', 
         "Starting Elf: {0}" -f $ScriptName
     )
 
     #[string]$Script = Get-ScriptFromLibrary -ScriptName $ScriptName
-    $Script = 'Write-Output "You invoked, sir?"'
+    $Script = (Get-Command Script).Definition
+    #$Script = 'Write-Output "You invoked, sir?"'
 
     #Query DB for IPs and credentials for target computers
     $ConnectionInfos = Get-DeviceInfo -DeviceID $DeviceID
 
     #Thread-safe hashtable to hold data for each run
-    $Fleet = @{}
+    $Script:Fleet = @{}
 
 
     #Set up the job objects
     foreach ($ConnectionInfo in $ConnectionInfos) {
-        $RunObj = New-Object $RunObjType (
+        $RunObj = Get-RunObject (
             $Script,
             $Dependencies,
             $ConnectionInfo
         )
-        $Fleet.Add($ConnectionInfo.DeviceID, $RunObj)
+        $Fleet.Add($RunObj.RS.InstanceId.Guid, $RunObj)
     }
 
     foreach  ($Kvp in $Fleet.GetEnumerator()) {
         #Start the run in a new thread
-        $Kvp.Value.Invoke()
+        $null = Register-ObjectEvent -InputObject $Kvp.Value.PS -EventName 'InvocationStateChanged' -Action $ElfPsCallback
+        $Kvp.Value.BeginInvoke()
     }
 
 }
 
-Run-Elf -Debug
+$ElfPsCallback = {
+    $RunspaceID = $event.Sender.Runspace.InstanceId.Guid
+    $Logger.Log(
+        $RunspaceID.Substring(0, 8),
+        'Information',
+        "PS state {0}" -f $Eventargs.InvocationStateInfo.State
+    )
+
+    if ($Eventargs.InvocationStateInfo.State -eq [System.Management.Automation.PSInvocationState]::Completed) {
+        #$Return = $Fleet[$RunspaceID].EndInvoke()
+        $Return = $event.Sender.EndInvoke()
+        Write-host $Return.Output
+    }
+}
+
+
+
+
+
+
+Run-Elf #-Debug

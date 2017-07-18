@@ -45,35 +45,21 @@ function Get-LoggerObject {
         
         $LogLine | Out-File $this.LogFile -Append
     }
+
+    $Logger.Log(
+        'Elf',
+        'Information',
+        'Starting logging'
+    )
     return $Logger
 }
 
 
-#Add some random messages to the log
-$ErrorLevels = (
-    'Error',
-    'Verbose',
-    'Debug',
-    'Warning',
-    'Information'
-)
-$Devices = (
-    'localhost',
-    'OtherDevice'
-)
-$Logger = Get-LoggerObject
-#$Logger.Log("localhost", "Information", "hello world")
-$Logger.Log(
-    $Devices[(Get-Random 2)],
-    $ErrorLevels[(Get-Random 5)],
-    "hello world"
-)
-
-
 
 function Read-Log {
+    #Read-Log -Wait
     param(
-        $DeviceID,
+        $DeviceID,  #filter
         [switch]$Wait    
     )
 
@@ -87,21 +73,21 @@ function Read-Log {
     }
 
     $Colours = @{
-                'Error' = 'Red'
-                'Verbose' = 'Gray'
-                'Debug' = 'DarkGray'
-                'Warning' = 'Yellow'
-                'Information' = 'White'
+        'Error' = 'Red'
+        'Verbose' = 'Gray'
+        'Debug' = 'DarkGray'
+        'Warning' = 'Yellow'
+        'Information' = 'White'
     }
 
     Get-Content $LogFile -Tail 40 -Wait:$Wait | where $Filter | foreach {
         $Colour = $Colours[$(
             $_.SubString(38, 12).Trim()
         )]
-        Write-Host -ForegroundColor $Colour $_ #($_.SubString(53))
+        Write-Host -ForegroundColor $Colour $_
 
     }
 
 }
-#Read-Log -Wait
+
 

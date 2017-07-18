@@ -7,6 +7,7 @@ function Get-RunObject {
         $Script,
         $Dependencies,
         $ConnectionInfo = @{DeviceID = '1234testing'}
+        
     )
 
     
@@ -21,7 +22,9 @@ function Get-RunObject {
         ConnectionInfo = $ConnectionInfo;
         PS = [powershell]::Create();
         RS = [runspacefactory]::CreateRunspace();
-        Handle = $null
+        Handle = $null;
+        Output = $null;
+        Streams =$null;
     }
     
     
@@ -45,10 +48,14 @@ function Get-RunObject {
         [CmdletBinding()]
         param()
 
-        $Output = $this.PS.Invoke()
-        $Output
+        $this.PS.Invoke()
         $this.RS.Dispose()
         $this.PS.Dispose()
+        New-Object psobject -Property @{
+            Output = $Output
+            Streams = $this.PS.Streams
+            HadErrors = $this.PS.Streams
+        }
     }
 
     $RunObj | Add-Member -MemberType ScriptMethod -Name BeginInvoke -Value {
@@ -56,40 +63,45 @@ function Get-RunObject {
         param()
 
         $this.Handle = $this.PS.BeginInvoke()
-      
-        #$Output = $this.PS.EndInvoke($Handle)
-        #$Output
-        #$this.RS.Dispose()
-        #$this.PS.Dispose()
+    }
+
+    $RunObj | Add-Member -MemberType ScriptMethod -Name EndInvoke -Value {
+        [CmdletBinding()]
+        param()
+
+        $Output = $this.PS.Endinvoke($this.Handle)
+        $this.RS.Dispose()
+        $this.PS.Dispose()
+        New-Object psobject -Property @{
+            Output = $Output
+            Streams = $this.PS.Streams
+            HadErrors = $this.PS.Streams
+        }
     }
 
     return $RunObj
 }
 
-$Logger = Get-LoggerObject
+#$Logger = Get-LoggerObject
 
-$RunObj = Get-RunObject -Script '
-        $VerbosePreference = "COntinue";
-        Start-sleep 1
-    Write-Verbose "Some verbose info"; 
-    Write-Output "Standard"
-    Get-Variable | where Name -match "Preference"; 
-    Start-sleep 1
-    Write-Error "Some error info here"
-' -Verbose -Debug
+#$RunObj = Get-RunObject -Script (Get-Command Script).Definition -Verbose -Debug
 
-
+<#
 $null = Register-ObjectEvent -InputObject $RunObj.PS -EventName 'InvocationStateChanged' -Action {
+    $Logger.Log(
+        $event.Sender.Runspace.InstanceId.Guid.Substring(0, 8),
+        'Information',
+        "PS state {0}" -f $Eventargs.InvocationStateInfo.State
+    )
+
     if ($Eventargs.InvocationStateInfo.State -eq [System.Management.Automation.PSInvocationState]::Completed) {
+        Wait-Debugger
         Write-Verbose $Eventargs.InvocationStateInfo.State
         $Event.Sender.Streams.Verbose | foreach {Write-Verbose $_}
-        $Event.Sender.Streams.Error | foreach {Write-Error $_}
-        $Event.Sender.EndInvoke($RunObj.Handle)
-        Write-Output "std"
+        #$Event.Sender.Streams.Error | foreach {Write-Error $_}
+        $this.Output = EndInvoke($RunObj.Handle)
         
     }
-    Write-Host "hi"
-
 }
 
     
@@ -102,3 +114,4 @@ $null = Register-ObjectEvent -InputObject $RunObj.PS -EventName 'InvocationState
 }
 
 $RunObj.BeginInvoke()
+#>
