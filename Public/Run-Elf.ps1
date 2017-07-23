@@ -1,3 +1,9 @@
+. $PSScriptRoot\Get-LoggerObject.ps1
+. $PSScriptRoot\..\Mock\Get-ScriptFromLibrary.ps1
+. $PSScriptRoot\..\Mock\Get-DeviceInfo.ps1
+. $PSScriptRoot\Get-RunObject.ps1
+
+$Global:Logger = Get-LoggerObject
 
 
 function Run-Elf {
@@ -8,30 +14,23 @@ function Run-Elf {
         [string[]]$DeviceID = 'localhost',
 
         #What script you want to run
-        [string]$ScriptName = 'Get-PowerShellVersion',
+        [string]$Script = 'Write-Output "You invoked, sir?"',
 
         #Exposes Log() method
-        [psobject]$Logger = $(. $PSScriptRoot\Get-LoggerObject.ps1; Get-LoggerObject)
+        [psobject]$Logger = $Global:Logger
     )
-
-    . $PSScriptRoot\..\Mock\Get-ScriptFromLibrary.ps1
-    . $PSScriptRoot\..\Mock\Get-DeviceInfo.ps1
-
+    
     $Logger.Log(
         $null, 
         'Information', 
         "Starting Elf: {0}" -f $ScriptName
     )
 
-    #[string]$Script = Get-ScriptFromLibrary -ScriptName $ScriptName
-    $Script = (Get-Command Script).Definition
-    #$Script = 'Write-Output "You invoked, sir?"'
-
     #Query DB for IPs and credentials for target computers
-    $ConnectionInfos = Get-DeviceInfo -DeviceID $DeviceID
+    $ConnectionInfos = Get-DeviceInfo -DeviceID $DeviceID   #Mock!
 
     #Thread-safe hashtable to hold data for each run
-    $Script:Fleet = @{}
+    $Script:Fleet = @{}   #Will be made thread-safe
 
 
     #Set up the job objects
@@ -45,15 +44,18 @@ function Run-Elf {
     }
 
     foreach  ($Kvp in $Fleet.GetEnumerator()) {
-        #Start the run in a new thread
+        #Set up the callback on the powershell changing state
         $null = Register-ObjectEvent -InputObject $Kvp.Value.PS -EventName 'InvocationStateChanged' -Action $ElfPsCallback
+        #Start the run in a new thread
         $Kvp.Value.BeginInvoke()
     }
 
 }
 
 $ElfPsCallback = {
+    Write-Host 'In callback'
     $RunspaceID = $event.Sender.Runspace.InstanceId.Guid
+
     $Logger.Log(
         $RunspaceID.Substring(0, 8),
         'Information',
@@ -61,15 +63,11 @@ $ElfPsCallback = {
     )
 
     if ($Eventargs.InvocationStateInfo.State -eq [System.Management.Automation.PSInvocationState]::Completed) {
-        #$Return = $Fleet[$RunspaceID].EndInvoke()
-        $Return = $event.Sender.EndInvoke()
-        Write-host $Return.Output
+        $Return = $Fleet[$RunspaceID].EndInvoke()
+        Write-Host $PSCmdlet
+        Write-Output $Return.Output
     }
 }
 
 
-
-
-
-
-Run-Elf #-Debug
+Run-Elf

@@ -24,7 +24,7 @@ function Get-RunObject {
         RS = [runspacefactory]::CreateRunspace();
         Handle = $null;
         Output = $null;
-        Streams =$null;
+        Streams = $null;
     }
     
     
@@ -48,13 +48,13 @@ function Get-RunObject {
         [CmdletBinding()]
         param()
 
-        $this.PS.Invoke()
+        $Output = $this.PS.Invoke()
         $this.RS.Dispose()
         $this.PS.Dispose()
         New-Object psobject -Property @{
             Output = $Output
             Streams = $this.PS.Streams
-            HadErrors = $this.PS.Streams
+            HadErrors = $this.PS.HadErrors
         }
     }
 
@@ -68,14 +68,14 @@ function Get-RunObject {
     $RunObj | Add-Member -MemberType ScriptMethod -Name EndInvoke -Value {
         [CmdletBinding()]
         param()
-
+        Wait-Debugger
         $Output = $this.PS.Endinvoke($this.Handle)
         $this.RS.Dispose()
         $this.PS.Dispose()
         New-Object psobject -Property @{
             Output = $Output
             Streams = $this.PS.Streams
-            HadErrors = $this.PS.Streams
+            HadErrors = $this.PS.HadErrors
         }
     }
 
