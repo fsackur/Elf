@@ -32,13 +32,46 @@ function Run-Elf {
     $ConnectionInfos = Get-DeviceInfo -DeviceID $DeviceID   #Mock!
 
     $ConnectionInfos | Start-RSJob -ScriptBlock {
-        Write-Output $_.ComputerName
-        Write-Output $_.Credential
-        iex $using:Script
-
+    #$ConnectionInfos | foreach {
+        #Wait-Debugger
+        #Write-Output $_.ComputerName
+        #Write-Output $_.Credential
+        #<#
+        $Global:Sesh = New-PSSession -ComputerName $_.ComputerName -Credential $_.Credential -UseSSL -SessionOption (
+            New-PSSessionOption -SkipCACheck -SkipCNCheck -SkipRevocationCheck
+        )
+        Invoke-Command -Session $Sesh -ScriptBlock {
+            $VerbosePreference = 'Continue'
+            #Get-Process
+            Write-Output 'Std out'
+            Write-Verbose "Verbose out"
+            Write-Error "Error out"
+        }
+        #Remove-PSSession $Sesh
+        #>
+        <#
+        $WsmanInfo = New-Object System.Management.Automation.Runspaces.WSManConnectionInfo (
+            $true, #useSsl
+	        $_.ComputerName,
+	        5986,
+	        '/wsman',
+	        'http://schemas.microsoft.com/powershell/Microsoft.PowerShell',
+	        $_.Credential,
+	        1000 #int openTimeout
+        )
+        $WsmanInfo.SkipCACheck = $true
+        $WsmanInfo.SkipCNCheck = $true
+        $WsmanInfo.SkipRevocationCheck = $true
+        $RS = [runspacefactory]::CreateRunspace($WsmanInfo)
+        $RS.Open()
+        $PS = [powershell]::Create()
+        $PS.Runspace = $RS
+        $PS.AddScript('$env:COMPUTERNAME') | Out-Null
+        $PS.Invoke()
+        #>
     } | Wait-RSJob | Receive-RSJob
 
 }
 
 
-Run-Elf
+$Out = Run-Elf -DeviceID FSJ2
