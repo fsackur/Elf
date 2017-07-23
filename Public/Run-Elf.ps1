@@ -1,3 +1,5 @@
+#requires -Modules PoshSecret, PoshRSJob
+
 . $PSScriptRoot\Get-LoggerObject.ps1
 . $PSScriptRoot\..\Mock\Get-ScriptFromLibrary.ps1
 . $PSScriptRoot\..\Mock\Get-DeviceInfo.ps1
@@ -29,44 +31,13 @@ function Run-Elf {
     #Query DB for IPs and credentials for target computers
     $ConnectionInfos = Get-DeviceInfo -DeviceID $DeviceID   #Mock!
 
-    #Thread-safe hashtable to hold data for each run
-    $Script:Fleet = @{}   #Will be made thread-safe
+    $ConnectionInfos | Start-RSJob -ScriptBlock {
+        Write-Output $_.ComputerName
+        Write-Output $_.Credential
+        iex $using:Script
 
+    } | Wait-RSJob | Receive-RSJob
 
-    #Set up the job objects
-    foreach ($ConnectionInfo in $ConnectionInfos) {
-        $RunObj = Get-RunObject (
-            $Script,
-            $Dependencies,
-            $ConnectionInfo
-        )
-        $Fleet.Add($RunObj.RS.InstanceId.Guid, $RunObj)
-    }
-
-    foreach  ($Kvp in $Fleet.GetEnumerator()) {
-        #Set up the callback on the powershell changing state
-        $null = Register-ObjectEvent -InputObject $Kvp.Value.PS -EventName 'InvocationStateChanged' -Action $ElfPsCallback
-        #Start the run in a new thread
-        $Kvp.Value.BeginInvoke()
-    }
-
-}
-
-$ElfPsCallback = {
-    Write-Host 'In callback'
-    $RunspaceID = $event.Sender.Runspace.InstanceId.Guid
-
-    $Logger.Log(
-        $RunspaceID.Substring(0, 8),
-        'Information',
-        "PS state {0}" -f $Eventargs.InvocationStateInfo.State
-    )
-
-    if ($Eventargs.InvocationStateInfo.State -eq [System.Management.Automation.PSInvocationState]::Completed) {
-        $Return = $Fleet[$RunspaceID].EndInvoke()
-        Write-Host $PSCmdlet
-        Write-Output $Return.Output
-    }
 }
 
 
